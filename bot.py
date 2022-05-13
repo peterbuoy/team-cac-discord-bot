@@ -1,14 +1,29 @@
-from datetime import datetime
+import datetime
+import pytz
 import discord
 import os
+import sqlite3
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
 load_dotenv()
 
+conn = sqlite3.connect("cac.db")
+cursor = conn.cursor()
+cursor.execute("CREATE TABLE IF NOT EXISTS mention (mentioned_discord_id TEXT, mention_timestamp INTEGER, mention_message_id TEXT)")
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix='%', intents=intents)
-# maybe just use sqlite for easy persistence. don't even bother with intermediate data structures unless necessary
-user_mentions_dict = {}
+
+TARGETED_USER_ID = 131965968980246529
+
+@bot.command()
+async def display(ctx):
+	testing_channel = await bot.fetch_channel("974545078695653439")
+	rows = cursor.execute("SELECT * from mention").fetchall()
+	if len(rows) > 0:
+		message = ""
+		for row in rows:
+			message += f"<@{row[0]}> was mentioned at {row[1]} in the following message {(await testing_channel.fetch_message(row[2])).jump_url}"
+		await ctx.send(message)
 
 @bot.event
 async def on_ready():
@@ -19,21 +34,23 @@ async def on_ready():
 async def on_message(message: discord.Message):
 	if message.author == bot.user:
 		return
-	# change this to only if david's ID is mentioned
-	if len(message.mentions) > 0:
-		for user in message.mentions:
-			user_mentions_dict[user.mention] = message.created_at
+	if len(message.mentions) == 1 and message.mentions[0].id == TARGETED_USER_ID:
+		utc_aware_timestamp = pytz.utc.localize(datetime.datetime.now())
+		assert utc_aware_timestamp.tzinfo != None
+		cursor.execute("INSERT INTO mention VALUES(?, ?, ?)", (TARGETED_USER_ID, utc_aware_timestamp, message.id))
+		conn.commit()
+	await bot.process_commands(message)
 
 @tasks.loop(seconds=30.0)
 async def remind_mentioned_to_reply():
 	testing_channel = await bot.fetch_channel("974545078695653439")
-	if len(user_mentions_dict) > 0: 
-		message = "The following users have been mentioned but have failed to respond in a timely manner: \n"
-		for userMention, message_timestamp in user_mentions_dict.items():
-			# not ideal since this is naive utc time :/
-			utc_time = datetime.utcnow()
-			message += f"{userMention} has not responded for {(utc_time - message_timestamp).total_seconds()} seconds"
-		await testing_channel.send(message)
+	# if len(user_mentions_dict) > 0: 
+	# 	message = "The following users have been mentioned but have failed to respond in a timely manner: \n"
+	# 	for userMention, message_timestamp in user_mentions_dict.items():
+	# 		# not ideal since this is naive utc time :/
+	# 		utc_time = datetime.utcnow()
+	# 		message += f"{userMention} has not responded for {(utc_time - message_timestamp).total_seconds()} seconds"
+	# 	await testing_channel.send(message)
 
 # only applies to David
 # increasing amount of time for each reminder
