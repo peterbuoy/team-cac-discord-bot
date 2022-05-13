@@ -24,6 +24,8 @@ async def display(ctx):
 		for row in rows:
 			message += f"<@{row[0]}> was mentioned at {row[1]} in the following message {(await testing_channel.fetch_message(row[2])).jump_url}"
 		await ctx.send(message)
+	else:
+		await ctx.send("The reply queue is empty for now, good job!")
 
 @bot.event
 async def on_ready():
@@ -39,6 +41,14 @@ async def on_message(message: discord.Message):
 		assert utc_aware_timestamp.tzinfo != None
 		cursor.execute("INSERT INTO mention VALUES(?, ?, ?)", (TARGETED_USER_ID, utc_aware_timestamp, message.id))
 		conn.commit()
+	if (message.author.id == TARGETED_USER_ID and message.reference != None):
+		reply_id = str(message.reference.message_id)
+		hit = cursor.execute("DELETE FROM mention WHERE mention_message_id = ?", (reply_id, )).fetchone()
+		conn.commit()
+		if type(hit) == None:
+			return
+		else:
+			await message.channel.send("You have replied to one message. Your response has been recorded.")
 	await bot.process_commands(message)
 
 @tasks.loop(seconds=30.0)
