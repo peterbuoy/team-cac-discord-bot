@@ -10,3 +10,6 @@ Scaffolding:
 **SQLite**, Database
 
 **Droplet**, VPS
+
+Dependencies:
+Python 3.9 or higher for Poetry
