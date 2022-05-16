@@ -32,7 +32,9 @@ def calc_next_remind_time(hours: int):
 		return hours + 24
 
 def calc_prev_remind_time(hours: int):
-	if hours == 2:
+	if hours == 1:
+		return 0
+	elif hours == 2:
 		return 1
 	elif hours == 4:
 		return 2
@@ -49,7 +51,7 @@ def define_custom_func():
 	conn.create_function('calc_next_remind_time', 1, calc_next_remind_time)
 define_custom_func()
 
-TARGETED_USER_ID = 212395768273829890
+TARGETED_USER_ID = 131965968980246529
 
 @bot.command()
 async def display(ctx):
@@ -74,7 +76,7 @@ async def on_message(message: discord.Message):
 		return
 	if len(message.mentions) == 1 and message.mentions[0].id == TARGETED_USER_ID:
 		unix_timestamp = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
-		cursor.execute("INSERT INTO mention VALUES(?, ?, ?, ?)", (TARGETED_USER_ID, unix_timestamp, message.id, 1))
+		cursor.execute("INSERT INTO mention VALUES(?, ?, ?, ?)", (TARGETED_USER_ID, unix_timestamp, message.id, 0))
 		conn.commit()
 	if (message.author.id == TARGETED_USER_ID and message.reference != None):
 		reply_id = str(message.reference.message_id)
@@ -89,7 +91,7 @@ async def on_message(message: discord.Message):
 @tasks.loop(seconds=60)
 async def remind_mentioned_to_reply():
 	testing_channel = await bot.fetch_channel("974545078695653439")
-	reminders = cursor.execute("UPDATE mention SET remind_time_in_hours = calc_next_remind_time(remind_time_in_hours) WHERE (remind_time_in_hours * 60 * 60) < (unixepoch() - mention_timestamp) RETURNING *").fetchall()
+	reminders = cursor.execute("UPDATE mention SET remind_time_in_hours = calc_next_remind_time(remind_time_in_hours) WHERE (remind_time_in_hours * 60 * 60) < (((julianday('now') - 2440587.5) * 86400.0) - mention_timestamp) RETURNING *").fetchall()
 	conn.commit()
 	if len(reminders) < 1:
 		return
