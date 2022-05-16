@@ -50,7 +50,7 @@ def calc_prev_remind_time(hours: int):
 def define_custom_func():
 	conn.create_function('calc_next_remind_time', 1, calc_next_remind_time)
 
-TARGETED_USER_ID = 131965968980246529
+TARGETED_USER_ID = 212395768273829890
 
 @bot.command()
 async def display(ctx):
@@ -97,7 +97,7 @@ async def remind_mentioned_to_reply():
 	# mentioned_user_discord_id TEXT, mention_timestamp INTEGER, mention_message_id TEXT, remind_time_in_hours INTEGER
 
 	# this only mentions the first person in the list... which is only one person anyway LOL
-	reminder_message = f"<@{reminders[0][0]}>\nBelow are the message(s) you have not replied to in a timely manner."
+	reminder_message = f"<@{reminders[0][0]}>\nBelow are the message(s) you have not replied to in a timely manner.\n"
 	f"Please **reply** to the linked message to remove these reminders.\n"
 	for reminder in reminders:
 		message_with_mention_jump_url = (await testing_channel.fetch_message(reminder[2])).jump_url
