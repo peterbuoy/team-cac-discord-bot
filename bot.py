@@ -51,7 +51,7 @@ def define_custom_func():
 	conn.create_function('calc_next_remind_time', 1, calc_next_remind_time)
 define_custom_func()
 
-TARGETED_USER_ID = 131965968980246529
+TARGETED_USER_ID = 212395768273829890
 
 @bot.command()
 async def display(ctx):
@@ -78,6 +78,7 @@ async def on_message(message: discord.Message):
 		unix_timestamp = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
 		cursor.execute("INSERT INTO mention VALUES(?, ?, ?, ?)", (TARGETED_USER_ID, unix_timestamp, message.id, 0))
 		conn.commit()
+	# pinning a message will count as replying to a message
 	if (message.author.id == TARGETED_USER_ID and message.reference != None):
 		reply_id = str(message.reference.message_id)
 		hit = cursor.execute("DELETE FROM mention WHERE mention_message_id = ?", (reply_id, )).fetchone()
@@ -98,8 +99,7 @@ async def remind_mentioned_to_reply():
 	# mentioned_user_discord_id TEXT, mention_timestamp INTEGER, mention_message_id TEXT, remind_time_in_hours INTEGER
 
 	# this only mentions the first person in the list... which is only one person anyway LOL
-	reminder_message = f"<@{TARGETED_USER_ID}>\nBelow are the message(s) you have not replied to in a timely manner.\n"
-	f"Please **reply** to the linked message to remove these reminders.\n"
+	reminder_message = f"<@{TARGETED_USER_ID}>\nBelow are the message(s) you have not replied to in a timely manner.\nPlease Discord **reply** to the linked message to remove these reminders.\n"
 	for reminder in reminders:
 		message_with_mention_jump_url = (await testing_channel.fetch_message(reminder[2])).jump_url
 		reminder_message += f"{calc_prev_remind_time(reminder[3])} hour(s) ago.\n{message_with_mention_jump_url}\n\n"
