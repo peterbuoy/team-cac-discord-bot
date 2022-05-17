@@ -76,7 +76,7 @@ async def on_message(message: discord.Message):
 		return
 	if len(message.mentions) == 1 and message.mentions[0].id == TARGETED_USER_ID:
 		unix_timestamp = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
-		cursor.execute("INSERT INTO mention VALUES(?, ?, ?, ?)", (TARGETED_USER_ID, unix_timestamp, message.id, 0))
+		cursor.execute("INSERT INTO mention VALUES(?, ?, ?, ?)", (TARGETED_USER_ID, unix_timestamp, message.id, 1))
 		conn.commit()
 	# pinning a message will count as replying to a message
 	if (message.author.id == TARGETED_USER_ID and message.reference != None):
