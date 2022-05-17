@@ -52,10 +52,11 @@ def define_custom_func():
 define_custom_func()
 
 TARGETED_USER_ID = 212395768273829890
+TARGET_CHANNEL_ID = 274417939866714113
 
 @bot.command()
 async def display(ctx):
-	testing_channel = await bot.fetch_channel("974545078695653439")
+	testing_channel = await bot.fetch_channel(TARGET_CHANNEL_ID)
 	rows = cursor.execute("SELECT * from mention").fetchall()
 	if len(rows) > 0:
 		message = ""
@@ -91,7 +92,7 @@ async def on_message(message: discord.Message):
 
 @tasks.loop(seconds=60)
 async def remind_mentioned_to_reply():
-	testing_channel = await bot.fetch_channel("974545078695653439")
+	testing_channel = await bot.fetch_channel(TARGET_CHANNEL_ID)
 	reminders = cursor.execute("UPDATE mention SET remind_time_in_hours = calc_next_remind_time(remind_time_in_hours) WHERE (remind_time_in_hours * 60 * 60) < (((julianday('now') - 2440587.5) * 86400.0) - mention_timestamp) RETURNING *").fetchall()
 	conn.commit()
 	if len(reminders) < 1:
