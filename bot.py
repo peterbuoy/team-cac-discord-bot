@@ -74,7 +74,7 @@ async def on_ready():
 async def on_message(message: discord.Message):
 	if message.author == bot.user:
 		return
-	if len(message.mentions) == 1 and message.mentions[0].id == TARGETED_USER_ID:
+	if len(message.mentions) > 0 and TARGETED_USER_ID in map(lambda x: x.id, message.mentions):
 		unix_timestamp = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
 		cursor.execute("INSERT INTO mention VALUES(?, ?, ?, ?)", (TARGETED_USER_ID, unix_timestamp, message.id, 1))
 		conn.commit()
