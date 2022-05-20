@@ -87,7 +87,7 @@ async def on_message(message: discord.Message):
 		if type(hit) == None:
 			return
 		else:
-			await message.channel.send("You have replied to one message. Your response has been recorded.")
+			await message.channel.send(f"You have replied to one message with the following response:\n >>> {message}")
 	await bot.process_commands(message)
 
 @tasks.loop(seconds=60)
@@ -98,11 +98,15 @@ async def remind_mentioned_to_reply():
 	if len(reminders) < 1:
 		return
 	# mentioned_user_discord_id TEXT, mention_timestamp INTEGER, mention_message_id TEXT, remind_time_in_hours INTEGER
-
 	# this only mentions the first person in the list... which is only one person anyway LOL
 	reminder_message = f"<@{TARGETED_USER_ID}>\nBelow are the message(s) you have not replied to in a timely manner.\nPlease Discord **reply** to the linked message to remove these reminders.\n"
 	for reminder in reminders:
-		message_with_mention_jump_url = (await testing_channel.fetch_message(reminder[2])).jump_url
+		try:
+			message_with_mention_jump_url = (await testing_channel.fetch_message(reminder[2])).jump_url
+		except discord.NotFound:
+			# uncomment the DELETE statement when you want to fix the bot lmao
+		  # cursor.execute("DELETE FROM mention WHERE message_mention_id = ?", reminder[2])
+			await testing_channel.send(reminder_message)
 		reminder_message += f"{calc_prev_remind_time(reminder[3])} hour(s) ago.\n{message_with_mention_jump_url}\n\n"
 	if reminder_message != "":
 		await testing_channel.send(reminder_message)
