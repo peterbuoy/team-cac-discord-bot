@@ -108,7 +108,7 @@ async def remind_mentioned_to_reply():
 		try:
 			message_with_mention_jump_url = (await testing_channel.fetch_message(reminder[2])).jump_url
 		except discord.NotFound:
-			cursor.execute("DELETE FROM mention WHERE mention_message_id = ?", reminder[2])
+			cursor.execute("DELETE FROM mention WHERE mention_message_id = ?", (reminder[2],))
 			conn.commit()
 			await testing_channel.send(reminder_message)
 		reminder_message += f"{calc_prev_remind_time(reminder[3])} hour(s) ago.\n{message_with_mention_jump_url}\n\n"
