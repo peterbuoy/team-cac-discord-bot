@@ -56,7 +56,7 @@ TARGET_CHANNEL_ID = 274417939866714113
 
 @bot.command()
 async def display(ctx):
-	
+
 	testing_channel = await bot.fetch_channel(TARGET_CHANNEL_ID)
 	rows = cursor.execute("SELECT * from mention").fetchall()
 	if len(rows) > 0:
@@ -108,7 +108,7 @@ async def remind_mentioned_to_reply():
 		try:
 			message_with_mention_jump_url = (await testing_channel.fetch_message(reminder[2])).jump_url
 		except discord.NotFound:
-			cursor.execute("DELETE FROM mention WHERE message_mention_id = ?", reminder[2])
+			cursor.execute("DELETE FROM mention WHERE mention_message_id = ?", reminder[2])
 			await testing_channel.send(reminder_message)
 		reminder_message += f"{calc_prev_remind_time(reminder[3])} hour(s) ago.\n{message_with_mention_jump_url}\n\n"
 	if reminder_message != "":
