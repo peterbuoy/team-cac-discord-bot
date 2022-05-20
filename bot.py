@@ -56,12 +56,16 @@ TARGET_CHANNEL_ID = 274417939866714113
 
 @bot.command()
 async def display(ctx):
+	
 	testing_channel = await bot.fetch_channel(TARGET_CHANNEL_ID)
 	rows = cursor.execute("SELECT * from mention").fetchall()
 	if len(rows) > 0:
 		message = ""
 		for row in rows:
-			message += f"<@{row[0]}> was mentioned at <t:{row[1]}:F> in the following message {(await testing_channel.fetch_message(row[2])).jump_url}\n"
+			try:
+				message += f"<@{row[0]}> was mentioned at <t:{row[1]}:F> in the following message {(await testing_channel.fetch_message(row[2])).jump_url}\n"
+			except discord.NotFound:
+				message += f"<@{row[0]}> was mentioned at <t:{row[1]}:F> in a message but it has been deleted.\n"
 		await ctx.send(message)
 	else:
 		await ctx.send("The reply queue is empty for now, good job!")
@@ -104,8 +108,7 @@ async def remind_mentioned_to_reply():
 		try:
 			message_with_mention_jump_url = (await testing_channel.fetch_message(reminder[2])).jump_url
 		except discord.NotFound:
-			# uncomment the DELETE statement when you want to fix the bot lmao
-		  # cursor.execute("DELETE FROM mention WHERE message_mention_id = ?", reminder[2])
+			cursor.execute("DELETE FROM mention WHERE message_mention_id = ?", reminder[2])
 			await testing_channel.send(reminder_message)
 		reminder_message += f"{calc_prev_remind_time(reminder[3])} hour(s) ago.\n{message_with_mention_jump_url}\n\n"
 	if reminder_message != "":
