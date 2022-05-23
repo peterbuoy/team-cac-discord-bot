@@ -91,7 +91,7 @@ async def on_message(message: discord.Message):
 		if type(hit) == None:
 			return
 		else:	
-			await message.channel.send(f"You have replied to one message with the following response:\n >>> {message}")
+			await message.channel.send(f"You have replied to one message with the following response:\n >>> {message.clean_content}")
 	await bot.process_commands(message)
 
 @tasks.loop(seconds=60)
