@@ -55,7 +55,7 @@ TARGETED_USER_ID = 212395768273829890
 TARGET_CHANNEL_ID = 274417939866714113
 
 @bot.command()
-async def display(ctx):
+async def reminders(ctx):
 
 	testing_channel = await bot.fetch_channel(TARGET_CHANNEL_ID)
 	rows = cursor.execute("SELECT * from mention").fetchall()
@@ -79,12 +79,12 @@ async def on_ready():
 async def on_message(message: discord.Message):
 	if message.author == bot.user:
 		return
-	if len(message.mentions) > 0 and TARGETED_USER_ID in map(lambda x: x.id, message.mentions):
+	if len(message.mentions) > 0 and TARGETED_USER_ID in map(lambda x: x.id, message.mentions) and message.reference is None:
 		unix_timestamp = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
 		cursor.execute("INSERT INTO mention VALUES(?, ?, ?, ?)", (TARGETED_USER_ID, unix_timestamp, message.id, 1))
 		conn.commit()
 	# pinning a message will count as replying to a message
-	if (message.author.id == TARGETED_USER_ID and message.reference != None):
+	if (message.author.id == TARGETED_USER_ID and message.reference is not None):
 		reply_id = str(message.reference.message_id)
 		hit = cursor.execute("DELETE FROM mention WHERE mention_message_id = ?", (reply_id, )).fetchone()
 		conn.commit()
