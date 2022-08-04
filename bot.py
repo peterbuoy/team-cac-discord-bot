@@ -100,10 +100,14 @@ def calc_next_remind_interval_from_hours_elapsed(hours_elapsed: int):
 
 def isMessageValidMention(message_id: int) -> bool:
 	message = cursor.execute("SELECT * FROM mention WHERE mention_message_id = ?", (message_id,)).fetchone()
-	if message is None:
+	if message is None:	
 		return False
 	else:
 		return True
+
+
+def calc_hours_elapsed_from_initial_mention(mention_unix_timestamp: int) -> int:
+	return (int(datetime.datetime.now(tz=pytz.UTC).timestamp()) - mention_unix_timestamp) // 3600
 
 
 @tasks.loop(seconds=60)
@@ -116,7 +120,7 @@ async def remind_mentioned_to_reply():
 
 	reminder_message = f"<@{TARGET_USER_ID}>\nBelow are the message(s) you have not replied to in a timely manner.\nPlease Discord **reply** to the linked message to remove these reminders.\n"
 	for reminder in reminders:
-		hours_elapsed_since_initial_mention = (int(datetime.datetime.now(tz=pytz.UTC).timestamp()) - reminder[1]) // 3600
+		hours_elapsed_since_initial_mention = calc_hours_elapsed_from_initial_mention(reminder[1])
 		new_next_reminder_interval = calc_next_remind_interval_from_hours_elapsed(hours_elapsed_since_initial_mention)
 		# initial timestamp plus the next interval (calculated from the hours elapsed) will give you the new reminder time
 		# this is so that if the bot goes down, it will give the proper remind time
