@@ -80,7 +80,7 @@ async def on_message(message: discord.Message):
 	await bot.process_commands(message)
 
 
-def calc_next_remind_interval_from_hours_elapsed(hours_elapsed: int):
+def calc_next_remind_interval_from_hours_elapsed(hours_elapsed: int) -> int:
 	if hours_elapsed >= 24:
 		return (hours_elapsed // 24) * 24
 	elif hours_elapsed >= 12:
@@ -95,7 +95,9 @@ def calc_next_remind_interval_from_hours_elapsed(hours_elapsed: int):
 		return 2
 	# the 1 hour reminder is already baked into the row upon insertion
 	else:
-		print("Something has gone terrible wrong in calculating the next reminder time function.")
+		FALLBACK_HOUR_VALUE = 1000
+		print(f"Something has gone terribly wrong in the calculation for the next reminder interval. Interval has been set to {FALL_BACK_HOUR_VALUE} hours")
+		return FALLBACK_HOUR_VALUE
 
 
 def isMessageValidMention(message_id: int) -> bool:
