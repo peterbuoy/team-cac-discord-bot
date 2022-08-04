@@ -37,7 +37,7 @@ bot = commands.Bot(command_prefix='%', intents=intents)
 
 @bot.event
 async def on_ready():
-	print(f'{bot.user.name}: Bot Ready at ${datetime.datetime.now()}')
+	print(f'{bot.user.name}: Bot Ready at {datetime.datetime.now()}')
 	print('------')
 
 
@@ -80,7 +80,7 @@ async def on_message(message: discord.Message):
 	await bot.process_commands(message)
 
 
-def calc_next_remind_interval_from_initial_mention(hours_elapsed: int):
+def calc_next_remind_interval_from_hours_elapsed(hours_elapsed: int):
 	if hours_elapsed >= 24:
 		return (hours_elapsed // 24) * 24
 	elif hours_elapsed >= 12:
@@ -116,8 +116,8 @@ async def remind_mentioned_to_reply():
 
 	reminder_message = f"<@{TARGET_USER_ID}>\nBelow are the message(s) you have not replied to in a timely manner.\nPlease Discord **reply** to the linked message to remove these reminders.\n"
 	for reminder in reminders:
-		hours_elapsed = (int(datetime.datetime.now(tz=pytz.UTC).timestamp()) - reminder[1]) // 3600
-		new_next_reminder_interval = calc_next_remind_interval_from_initial_mention(hours_elapsed)
+		hours_elapsed_since_initial_mention = (int(datetime.datetime.now(tz=pytz.UTC).timestamp()) - reminder[1]) // 3600
+		new_next_reminder_interval = calc_next_remind_interval_from_hours_elapsed(hours_elapsed_since_initial_mention)
 		# initial timestamp plus the next interval (calculated from the hours elapsed) will give you the new reminder time
 		# this is so that if the bot goes down, it will give the proper remind time
 		new_next_reminder_time = int(reminder[1]) + (new_next_reminder_interval * 3600)
