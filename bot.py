@@ -1,11 +1,11 @@
 import datetime
-import pytest
 import argparse
 import pytz
 import discord
 import os
 import sqlite3
 from discord.ext import tasks, commands
+import util
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -51,7 +51,9 @@ async def reminders(ctx):
 			try:
 				message += f"<@{row[0]}> was mentioned at <t:{row[1]}:F> in the following message {(await testing_channel.fetch_message(row[2])).jump_url}\n"
 			except discord.NotFound:
-				message += f"<@{row[0]}> was mentioned at <t:{row[1]}:F> in a message but it has been deleted.\n"
+				message += f"<@{row[0]}> was mentioned at <t:{row[1]}:F> in a message but it has been deleted. The message will now be removed from the reminders\n"
+				cursor.execute("DELETE FROM mention WHERE mention_message_id = ?", (row[2], ))
+				conn.commit()
 		await ctx.send(message)
 	else:
 		await ctx.send("The reply queue is empty for now, good job!")
@@ -69,7 +71,7 @@ async def on_message(message: discord.Message):
 		cursor.execute("INSERT INTO mention VALUES(?, ?, ?, ?)", (TARGET_USER_ID, unix_timestamp, message.id, unix_timestamp + 3600))
 		conn.commit()
 	# This ensures that only replies to a valid mention have their message content repeated in the channel
-	if (message.author.id == TARGET_USER_ID and message.reference is not None and isMessageValidMention(message.reference.message_id)):
+	if (message.author.id == TARGET_USER_ID and message.reference is not None and util.isMessageValidMention(message.reference.message_id, cursor)):
 		reply_id = str(message.reference.message_id)
 		hit = cursor.execute("DELETE FROM mention WHERE mention_message_id = ?", (reply_id, )).fetchone()
 		conn.commit()
@@ -78,38 +80,6 @@ async def on_message(message: discord.Message):
 		else:	
 			await message.channel.send(f"You have replied to one message with the following response:\n >>> {message.clean_content}")
 	await bot.process_commands(message)
-
-
-def calc_next_remind_interval_from_hours_elapsed(hours_elapsed: int) -> int:
-	if hours_elapsed >= 24:
-		return (hours_elapsed // 24) * 24
-	elif hours_elapsed >= 12:
-		return 24
-	elif hours_elapsed >= 6:
-		return 12
-	elif hours_elapsed >= 4:
-		return 6
-	elif hours_elapsed >= 2:
-		return 4
-	elif hours_elapsed >= 1:
-		return 2
-	# the 1 hour reminder is already baked into the row upon insertion
-	else:
-		FALLBACK_HOUR_VALUE = 1000
-		print(f"Something has gone terribly wrong in the calculation for the next reminder interval. Interval has been set to {FALL_BACK_HOUR_VALUE} hours")
-		return FALLBACK_HOUR_VALUE
-
-
-def isMessageValidMention(message_id: int) -> bool:
-	message = cursor.execute("SELECT * FROM mention WHERE mention_message_id = ?", (message_id,)).fetchone()
-	if message is None:	
-		return False
-	else:
-		return True
-
-
-def calc_hours_elapsed_from_initial_mention(mention_unix_timestamp: int) -> int:
-	return (int(datetime.datetime.now(tz=pytz.UTC).timestamp()) - mention_unix_timestamp) // 3600
 
 
 @tasks.loop(seconds=60)
@@ -122,8 +92,8 @@ async def remind_mentioned_to_reply():
 
 	reminder_message = f"<@{TARGET_USER_ID}>\nBelow are the message(s) you have not replied to in a timely manner.\nPlease Discord **reply** to the linked message to remove these reminders.\n"
 	for reminder in reminders:
-		hours_elapsed_since_initial_mention = calc_hours_elapsed_from_initial_mention(reminder[1])
-		new_next_reminder_interval = calc_next_remind_interval_from_hours_elapsed(hours_elapsed_since_initial_mention)
+		hours_elapsed_since_initial_mention = util.calc_hours_elapsed_from_initial_mention(reminder[1])
+		new_next_reminder_interval = util.calc_next_remind_interval_from_hours_elapsed(hours_elapsed_since_initial_mention)
 		# initial timestamp plus the next interval (calculated from the hours elapsed) will give you the new reminder time
 		# this is so that if the bot goes down, it will give the proper remind time
 		new_next_reminder_time = int(reminder[1]) + (new_next_reminder_interval * 3600)
