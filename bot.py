@@ -1,4 +1,6 @@
 import datetime
+import pytest
+import argparse
 import pytz
 import discord
 import os
@@ -8,23 +10,39 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+parser = argparse.ArgumentParser(description="Set environment flags.")
+parser.add_argument("--env", type=str, required=True, help='set to prod or dev')
+args = parser.parse_args()
+TARGET_USER_ID = 0
+TARGET_CHANNEL_ID = 0
+if args.env == "dev":
+	# Peter, Test
+	TARGET_USER_ID = 131965968980246529
+	TARGET_CHANNEL_ID = 974545078695653439
+elif args.env == "prod":
+	# Other guy, Prod
+	TARGET_USER_ID = 974545078695653439
+	TARGET_CHANNEL_ID = 274417939866714113
+else:
+	print(f"\033[93mArgument error:\033[0m\n{args.env} is not a valid flag for --env. Please specify dev or prod as an argument for --env.")
+	exit()
+print(f"{args.env} environment activated.")
+
 conn = sqlite3.connect("cac.db")
 cursor = conn.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS mention (mentioned_user_discord_id TEXT, mention_timestamp INTEGER, mention_message_id TEXT, next_reminder_time_unix INTEGER)")
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix='%', intents=intents)
 
-TARGETED_USER_ID = 131965968980246529
-# 131965968980246529 peter
-# 212395768273829890 david
-TARGET_CHANNEL_ID = 974545078695653439
-# 974545078695653439 test test channel
-# 274417939866714113 general channel
+
+@bot.event
+async def on_ready():
+	print(f'{bot.user.name}: Bot Ready at ${datetime.datetime.now()}')
+	print('------')
 
 
 @bot.command()
 async def reminders(ctx):
-
 	testing_channel = await bot.fetch_channel(TARGET_CHANNEL_ID)
 	rows = cursor.execute("SELECT * from mention").fetchall()
 	if len(rows) > 0:
@@ -40,23 +58,17 @@ async def reminders(ctx):
 
 
 @bot.event
-async def on_ready():
-	print(f'{bot.user.name}: Bot Ready at ${datetime.datetime.now()}')
-	print('------')
-
-
-@bot.event
 async def on_message(message: discord.Message):
 	if message.author == bot.user:
 		return
-	if len(message.mentions) > 0 and TARGETED_USER_ID in map(lambda x: x.id, message.mentions) and message.reference is None:
+	if len(message.mentions) > 0 and TARGET_USER_ID in map(lambda x: x.id, message.mentions) and message.reference is None:
 		unix_timestamp = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
 		print('unix_timestamp: ', unix_timestamp)
 		# We add 3600 (seconds) to the unix timestamp to set the next_reminder_time_unix column to one hour after a valid mention message
-		cursor.execute("INSERT INTO mention VALUES(?, ?, ?, ?)", (TARGETED_USER_ID, unix_timestamp, message.id, unix_timestamp + 3600))
+		cursor.execute("INSERT INTO mention VALUES(?, ?, ?, ?)", (TARGET_USER_ID, unix_timestamp, message.id, unix_timestamp + 3600))
 		conn.commit()
 	# pinning a message will count as replying to a message
-	if (message.author.id == TARGETED_USER_ID and message.reference is not None):
+	if (message.author.id == TARGET_USER_ID and message.reference is not None):
 		reply_id = str(message.reference.message_id)
 		hit = cursor.execute("DELETE FROM mention WHERE mention_message_id = ?", (reply_id, )).fetchone()
 		conn.commit()
@@ -93,7 +105,7 @@ async def remind_mentioned_to_reply():
 	if len(reminders) < 1:
 		return
 
-	reminder_message = f"<@{TARGETED_USER_ID}>\nBelow are the message(s) you have not replied to in a timely manner.\nPlease Discord **reply** to the linked message to remove these reminders.\n"
+	reminder_message = f"<@{TARGET_USER_ID}>\nBelow are the message(s) you have not replied to in a timely manner.\nPlease Discord **reply** to the linked message to remove these reminders.\n"
 	for reminder in reminders:
 		hours_elapsed = (int(datetime.datetime.now(tz=pytz.UTC).timestamp()) - reminder[1]) // 3600
 		new_next_reminder_interval = calc_next_remind_interval_from_initial_mention(hours_elapsed)
