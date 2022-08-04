@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-parser = argparse.ArgumentParser(description="Set environment flags.")
+parser = argparse.ArgumentParser(description="Set environment flag.")
 parser.add_argument("--env", type=str, required=True, help='set to prod or dev')
 args = parser.parse_args()
 TARGET_USER_ID = 0
@@ -61,14 +61,15 @@ async def reminders(ctx):
 async def on_message(message: discord.Message):
 	if message.author == bot.user:
 		return
-	if len(message.mentions) > 0 and TARGET_USER_ID in map(lambda x: x.id, message.mentions) and message.reference is None:
+	# This will not count replies as a mention
+	if TARGET_USER_ID in map(lambda x: x.id, message.mentions) and message.reference is None:
 		unix_timestamp = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
 		print('unix_timestamp: ', unix_timestamp)
 		# We add 3600 (seconds) to the unix timestamp to set the next_reminder_time_unix column to one hour after a valid mention message
 		cursor.execute("INSERT INTO mention VALUES(?, ?, ?, ?)", (TARGET_USER_ID, unix_timestamp, message.id, unix_timestamp + 3600))
 		conn.commit()
-	# pinning a message will count as replying to a message
-	if (message.author.id == TARGET_USER_ID and message.reference is not None):
+	# This ensures that only replies to a valid mention have their message content repeated in the channel
+	if (message.author.id == TARGET_USER_ID and message.reference is not None and isMessageValidMention(message.reference.message_id)):
 		reply_id = str(message.reference.message_id)
 		hit = cursor.execute("DELETE FROM mention WHERE mention_message_id = ?", (reply_id, )).fetchone()
 		conn.commit()
@@ -97,6 +98,14 @@ def calc_next_remind_interval_from_initial_mention(hours_elapsed: int):
 		print("Something has gone terrible wrong in calculating the next reminder time function.")
 
 
+def isMessageValidMention(message_id: int) -> bool:
+	message = cursor.execute("SELECT * FROM mention WHERE mention_message_id = ?", (message_id,)).fetchone()
+	if message is None:
+		return False
+	else:
+		return True
+
+
 @tasks.loop(seconds=60)
 async def remind_mentioned_to_reply():
 	target_channel = await bot.fetch_channel(TARGET_CHANNEL_ID)
@@ -112,10 +121,6 @@ async def remind_mentioned_to_reply():
 		# initial timestamp plus the next interval (calculated from the hours elapsed) will give you the new reminder time
 		# this is so that if the bot goes down, it will give the proper remind time
 		new_next_reminder_time = int(reminder[1]) + (new_next_reminder_interval * 3600)
-		print("hours elapsed for message with id, ", reminder[2], ",is ", hours_elapsed)
-		print("the new_next_reminder_interval is ", new_next_reminder_interval)
-		print("the message id is", reminder[2])
-		print("the new next reminder time is", new_next_reminder_time)
 		try:
 			message_with_mention_jump_url = (await target_channel.fetch_message(reminder[2])).jump_url
 			reminder_message += f"{(reminder[3] - reminder[1]) // 3600} hour(s) ago.\n{message_with_mention_jump_url}\n\n"
