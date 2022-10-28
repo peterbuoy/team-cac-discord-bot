@@ -38,5 +38,5 @@ I wanted to see what dependency management was like in Python and I wanted somet
 2. Run `poetry install` to update packages and create local `.venv`
 
 # How to start the bot with PM2
-Run `pm2 start 'poetry run python3 bot.py' --name team-cac-bot` to start the bot via PM2
+Run `pm2 start 'poetry run python3 bot.py --env prod' --name team-cac-bot` to start the bot via PM2
 
